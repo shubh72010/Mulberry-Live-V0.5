@@ -1,14 +1,7 @@
+import subprocess
 from flask import Flask, request, jsonify, render_template
-import random
 
 app = Flask(__name__)
-
-# Stupid simple replies for demo
-RESPONSES = {
-    "hi": ["Hey!", "Hello there!", "Hi, how's it going?"],
-    "how are you": ["I'm just code, but thanks for asking.", "Chillin'. You?", "Running light and free 😎"],
-    "bye": ["See ya!", "Goodbye!", "Peace out ✌️"],
-}
 
 @app.route("/")
 def home():
@@ -16,17 +9,23 @@ def home():
 
 @app.route("/chat", methods=["POST"])
 def chat():
-    data = request.get_json()
-    user_input = data.get("message", "").strip().lower()
-
+    user_input = request.json.get("message", "").strip()
     if not user_input:
-        return jsonify({"reply": "Say something, bro."})
+        return jsonify({"reply": "Say something, please."})
 
-    for keyword in RESPONSES:
-        if keyword in user_input:
-            return jsonify({"reply": random.choice(RESPONSES[keyword])})
+    # Call GPT4All CLI with input and get output (adjust path)
+    try:
+        result = subprocess.run(
+            ['path/to/gpt4all', '--prompt', user_input],
+            capture_output=True,
+            text=True,
+            timeout=15
+        )
+        reply = result.stdout.strip()
+    except Exception as e:
+        reply = f"Error: {str(e)}"
 
-    return jsonify({"reply": "I’m not smart enough to understand that yet 💀"})
+    return jsonify({"reply": reply})
 
 if __name__ == "__main__":
     app.run(debug=True)
