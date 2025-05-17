@@ -1,12 +1,14 @@
 from flask import Flask, request, jsonify, render_template
-from transformers import AutoModelForCausalLM, AutoTokenizer
-import torch
+import random
 
 app = Flask(__name__)
 
-# Load DialoGPT model once
-tokenizer = AutoTokenizer.from_pretrained("microsoft/DialoGPT-medium")
-model = AutoModelForCausalLM.from_pretrained("microsoft/DialoGPT-medium")
+# Stupid simple replies for demo
+RESPONSES = {
+    "hi": ["Hey!", "Hello there!", "Hi, how's it going?"],
+    "how are you": ["I'm just code, but thanks for asking.", "Chillin'. You?", "Running light and free 😎"],
+    "bye": ["See ya!", "Goodbye!", "Peace out ✌️"],
+}
 
 @app.route("/")
 def home():
@@ -15,23 +17,16 @@ def home():
 @app.route("/chat", methods=["POST"])
 def chat():
     data = request.get_json()
-    user_input = data.get("message", "")
+    user_input = data.get("message", "").strip().lower()
+
     if not user_input:
-        return jsonify({"reply": "Please type something."})
+        return jsonify({"reply": "Say something, bro."})
 
-    # Encode input and generate response
-    input_ids = tokenizer.encode(user_input + tokenizer.eos_token, return_tensors="pt")
-    chat_history_ids = model.generate(
-        input_ids,
-        max_length=1000,
-        pad_token_id=tokenizer.eos_token_id,
-        do_sample=True,
-        top_k=50,
-        top_p=0.95
-    )
+    for keyword in RESPONSES:
+        if keyword in user_input:
+            return jsonify({"reply": random.choice(RESPONSES[keyword])})
 
-    output = tokenizer.decode(chat_history_ids[:, input_ids.shape[-1]:][0], skip_special_tokens=True)
-    return jsonify({"reply": output})
+    return jsonify({"reply": "I’m not smart enough to understand that yet 💀"})
 
 if __name__ == "__main__":
     app.run(debug=True)
